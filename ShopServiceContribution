@@ -1,0 +1,983 @@
+local CollectionService = game:GetService("CollectionService")
+local DataStoreService = game:GetService("DataStoreService")
+local MemoryStoreService = game:GetService("MemoryStoreService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
+local HttpService = game:GetService("HttpService")
+
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local Knit = require(Packages.Knit)
+
+-- [PRODUCT_ID] = AMOUNT
+local STUD_PRODUCTS = {
+	[3578791110] = 100,
+	[3578789250] = 250,
+	[3578789403] = 500,
+	[3578789594] = 1250,
+	[3578789686] = 2500,
+	[3578790909] = 5000
+}
+
+-- [PRODUCT_ID] = {"SWORD_NAME_1", ...}
+local SEASONAL_PRODUCTS = {
+	[3574579704] = {"Twilight Sparkle"},
+	[3574593938] = {"Pinkie Pie"},
+	[3574594080] = {"Rainbow Dash"},
+	[3574579822] = {"Twilight Sparkle", "Pinkie Pie", "Rainbow Dash"},
+}
+
+-- [PLAYER_ID] = {"SWORD_NAME_1", ...}
+-- [PLAYER_ID] = "SWORD_NAME"
+local ITEM_GRANTS = {
+	[96498234] = "Nerdcat", --// wclxb
+	[22547936] = "Churro", --// rated
+	[30744884] = "Donovan's Staff", --// donovan
+	[3803377785] = "Chai", --// chai
+	[202455433] = {"Mae", "July2026_PremadeTourney"}, --// mae
+	[32344096] = "AK47", --// kat
+	[850634173] = "Nate", --// nate
+	[3839410633] = "Owen", --// owen
+	[1773734263] = "Murasame", --// xem main
+	[441826538] = "Alyssa", --// alyssa
+	[346367149] = "Heartblade", --// chocolate
+	[211061988] = "Krystal", --// krystal
+	[1025027246] = "Teal Pretty Princess", --// krystal backup
+	[1963791252] = {"Riley", "[GUITAR] PinkGuitar", "[GUITAR] BLGuitar"}, --// riley
+	[1444750695] = "Perk Sword", --// brad perk sword
+	[9054944112] = "Prada", --// prada
+	[388543058] = "Thomas", --// thomas
+	[86179345] = "Lena", --// lena
+	[1911449517] = "Perk Sword", --// sharpy perk sword
+	[513512958] = "Sav", --// sav's hello kitty staff
+	[468273614] = "Sean", --// sean
+	[10263831] = "Sean", --// aj
+	[8320884143] = "Perk Sword", --// clubbedunicorn
+	[3851455120] = "Sainted", --// muhammads sword
+	[4627757290] = "Eublazekiller", --// eublazekiller
+	[1686587705] = {"MintedComp's Custom", "Comp's Evil Custom"}, --// MintedComp's Customs
+	[2406196868] = "Chai", --// najim
+	[258585169] = "Perk Sword", --// Lonely perk sword
+	[4126044667] = "Liam", --// Liam
+	[1646591199] = "Perk Sword", --// Egg
+	[1740512834] = "Th9rnn", --// Thorn
+	[83344734] = "Aydan", --// Aydan
+	[2806431827] = "Perk Sword", --// Nukyri
+	[2231857705] = "Jaclyn", --// Jaclyn
+	[176195088] = "Beatsz", --// Beatsz
+	[1650828957] = {"Bloodhorse", "SVL-26", "Nebulance", "AdminBlade", "GreenAdminBlade", "Carnage I", "FlameAdminBlade"}, --// Flavian
+	[41476120] = {"New Years 2026", "Assigns", "NewPerk2026"}, --// Assigns
+	[1622614622] = {"StPatrick2026", "AK47", "Heavensent", "NewPerk2026"}, --// Pulse
+	[1374249347] = "Krystal", --// dusse
+	[1498367436] = "Christmas2025", --// eukyias 2025 winter
+	[4626026826] = "Christmas2025", --// aioffts 2025 winter
+	[398780594] = "Christmas2025", --// aranwoohoo 2025 winter
+	[659895655] = "Gingerbread2025", --// Polotrappd Winter 2025
+	[224064328] = "JayBloomCustom", --// TESTING ACC/FLAVIAN
+	[1188465619] = "StPatrick2026", --// "LOOOOOOOO0OOOOOOL"
+	[4330403646] = "StPatrick2026", --// Skippygoat4 Premade 2026
+	[4058563482] = {"NewPerk2026", "StPatrick2026"}, --// hxuricanes Premade 2026
+	[289645795] = "StPatrick2026", --// DDKiley Premade 2026
+	[472331843] = "Gingerbread2025", --// Vaxiiyy Premade 2026
+	[3643089842] = "NewPerk2026", --// Risaisri perk
+	[1868791973] = "NewPerk2026", --// vushyz perk
+	[257330096] = "NewPerk2026", --// Heaven_does perk
+	[148593304] = "Valentines2026", --// Xevm Valentines 2026
+	[2243812362] = "XmasBlade", --// erin xmas sword
+	[488790645] = "XmasBlade", --// versje xmas sword
+	[339538186] = "XmasBlade", --// emi xmas sword
+	[451751355] = "XmasBlade", --// rzbin xmas sword
+	[358801808] = "NewPerk2026", --// kuhleaf new perk
+	[201361914] = "JayBloomCustom", --// jaybloom custom sword
+	[834136941] = "Easter 2026", --// Aiden's Easter Sword
+	--[32652133] = "AK47", --// AK47
+	[171320356] = "NewPerk2026", --// Rune's Perk Sword
+	[2663198407] = "DarkArtsSword", --// sadbuffalo23 Custom Sword
+	[374192795] = "bittyboosammy's Custom", --// bittyboosammy's Custom Sword
+	[1274716565] = "Alexis' Custom", --// corsetia's Custom Sword
+	[1115582155] = {"NewPerk2026","Christmas2025"}, --// Joshies' Swords 
+	[334537289] = "MilestoneWinner_Axe2026", --// Juju/jlemzie's Milestone Axe
+	[7314738410] = "MilestoneWinner_Axe2026", --// Nate's (leviackrman) Milestone Axe
+	[571570864] = "wisenful", --// wisenful's Custom Sword
+	[5400404597] = "July2026_PremadeTourney", --// Amberhearts Tourney Katana
+	[129410186] = "July2026_PremadeTourney", --// Heartsjen Tourney Katana
+	[103134988] = "July2026_PremadeTourney", --// Alex's Tourney Katana
+	[3038831917] = "July2026_PremadeTourney", --// ChineseAsianBaddie's Tourney Katana
+	[2210587531] = "Ninjagirl's Custom", --// Ninjagirl_1223's Art Contest Sword
+	
+}
+
+local SCOPE = if RunService:IsStudio() then "_Dev" else ""
+
+local ClientSwordsFolder = ReplicatedStorage.Assets.Items.Swords
+local SwordsFolder = ServerStorage.Assets.Swords
+
+local temp = {}
+for _,v in SwordsFolder:GetChildren() do
+	table.insert(temp, v.Name)
+end
+ITEM_GRANTS[32652133] = temp
+ITEM_GRANTS[3006709268] = temp
+
+local shopData = ReplicatedStorage.Assets.Items.ShopData
+local currentRotation = shopData.CurrentRotation
+local timeLeftValue = shopData.TimeLeft
+local currentDayValue = shopData.CurrentDay
+
+local SerialDataStore = DataStoreService:GetOrderedDataStore(`SwordSerialData{SCOPE}`)
+local DailyShopMemoryStore = MemoryStoreService:GetHashMap(`DailyShop{SCOPE}`)
+local PENDING_PURCHASE_TTL = 600
+local DAILY_SHOP_ITEM_COUNT = 4
+local DAILY_SHOP_CACHE_BUFFER = 60 * 60
+local DAILY_SHOP_RARITY_WEIGHTS = {
+	COMMON = 1000,
+	UNCOMMON = 600,
+	RARE = 65,
+	LEGENDARY = 47,
+	GODLY = 38,
+}
+local DAILY_SHOP_RARITY_ORDER = {"COMMON", "UNCOMMON", "RARE", "LEGENDARY", "GODLY"}
+local GIFT_MESSAGE_TYPE = "ShopGift"
+local ADMIN_STUD_GRANT_MESSAGE_TYPE = "AdminStudGrant"
+local REPLICATE_SWORD_TAG = "ReplicateSword"
+local EXPECTED_DESCENDANTS_ATTRIBUTE = "ExpectedDescendants"
+
+local ShopService = Knit.CreateService {
+	Name = "ShopService",
+	Client = {}
+}
+
+local DataService
+local MarketService
+local PendingProductPurchases = {}
+local SwordReplicationReadyPlayers = {}
+local SwordDataLoadedPlayers = {}
+local InitialSwordReplicationComplete = {}
+
+local SHOP_LOG_CHANNEL_ID = "1519119099459014837"
+local PURCHASE_LOG_CHANNEL_ID = "1519119115501965423"
+local STUD_PURCHASE_LOG_CHANNEL_ID = "1519220364347965490"
+local ADMIN_STUD_GRANT_LOG_CHANNEL_ID = "1519915142656036924"
+
+local function sendDiscordMessage(channelId, message)
+	local success, error = pcall(task.spawn, function()
+		message = HttpService:JSONEncode(message)
+		HttpService:PostAsync(`https://roblox-worker.joritochip.workers.dev/discord/{channelId}`, message, Enum.HttpContentType.ApplicationJson, false, {
+			["Authorization"] = HttpService:GetSecret("WebhookToken")
+		})
+	end)
+	if not success then
+		warn(`Failed to send Discord message: {error}`)
+	end
+end
+
+function ShopService:ReplicateSwordToPlayer(player: Player, swordName: string)
+	local swordFolder = SwordsFolder:FindFirstChild(swordName)
+	if not swordFolder then
+		warn("Unable to replicate missing sword: " .. swordName)
+		return
+	end
+
+	local playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui", 10)
+	if not playerGui then
+		return
+	end
+
+	local swordClone = swordFolder:Clone()
+	swordClone:SetAttribute(EXPECTED_DESCENDANTS_ATTRIBUTE, #swordClone:GetDescendants())
+	CollectionService:AddTag(swordClone, REPLICATE_SWORD_TAG)
+	swordClone.Parent = playerGui
+end
+
+function ShopService:ReplicateOwnedSwords(player: Player, ownedSwords)
+	for _, sword in ownedSwords do
+		if typeof(sword) == "table" and typeof(sword.Name) == "string" then
+			ShopService:ReplicateSwordToPlayer(player, sword.Name)
+		end
+	end
+end
+
+function ShopService:ReplicateInitialOwnedSwords(player: Player, ownedSwords)
+	if InitialSwordReplicationComplete[player]
+		or not SwordReplicationReadyPlayers[player]
+		or not SwordDataLoadedPlayers[player]
+	then
+		return false
+	end
+
+	InitialSwordReplicationComplete[player] = true
+	ShopService:ReplicateOwnedSwords(player, ownedSwords)
+	return true
+end
+
+function ShopService:PlayerOwnsSword(player: Player, swordName: string)
+	local replica = DataService:GetReplica(player, false)
+	if not replica then return end
+
+	for _, sword in replica.Data.OwnedSwords do
+		if sword.Name == swordName then
+			return true
+		end
+	end
+	return false
+end
+
+local function getGrantedSwordSet(player: Player)
+	local grant = ITEM_GRANTS[player.UserId]
+	local grantedSwords = {}
+
+	if typeof(grant) == "string" then
+		grantedSwords[grant] = true
+	elseif typeof(grant) == "table" then
+		for _, swordName in grant do
+			grantedSwords[swordName] = true
+		end
+	end
+
+	return grantedSwords
+end
+
+local function getPlayerNameFromUserId(userId: number?): string?
+	if typeof(userId) ~= "number" then
+		return nil
+	end
+
+	local player = Players:GetPlayerByUserId(userId)
+	if player then
+		return player.Name
+	end
+
+	local success, name = pcall(Players.GetNameFromUserIdAsync, Players, userId)
+	return if success then name else nil
+end
+
+local function shouldCreateSerialForSword(swordName: string): boolean
+	local swordFolder = SwordsFolder:FindFirstChild(swordName)
+	if not swordFolder then
+		return false
+	end
+
+	local rarity = swordFolder:GetAttribute("Rarity")
+	if typeof(rarity) ~= "string" then
+		return false
+	end
+
+	local normalizedRarity = string.upper(rarity)
+	return normalizedRarity == "GODLY" or normalizedRarity == "LEGENDARY"
+end
+
+local function queueProfileNotification(player: Player, notification)
+	local replica = DataService:GetReplica(player, false)
+	if not replica then
+		return
+	end
+
+	replica:TableInsert({"ShopNotifications"}, notification)
+end
+
+local function queueStudGrantNotification(player: Player, studsAmount: number)
+	queueProfileNotification(player, {
+		Id = `{ADMIN_STUD_GRANT_MESSAGE_TYPE}:{DateTime.now().UnixTimestampMillis}:{math.random(1, 1_000_000)}`,
+		Type = ADMIN_STUD_GRANT_MESSAGE_TYPE,
+		StudsAmount = studsAmount,
+	})
+end
+
+function ShopService:GrantStudsToProfile(adminPlayer: Player, targetUserId: number, targetName: string, studsAmount: number): boolean
+	local success = DataService:MessageProfileAsync(targetUserId, {
+		Type = ADMIN_STUD_GRANT_MESSAGE_TYPE,
+		StudsAmount = studsAmount,
+		AdminUserId = adminPlayer.UserId,
+		AdminName = adminPlayer.Name,
+		CreatedAt = DateTime.now().UnixTimestamp,
+	})
+
+	if not success then
+		return false
+	end
+
+	local adminString = `**{adminPlayer.Name}** ({adminPlayer.UserId})`
+	sendDiscordMessage(ADMIN_STUD_GRANT_LOG_CHANNEL_ID, {
+		content = `{adminString} granted **{studsAmount} studs** to **{targetName}** ({targetUserId})`,
+	})
+
+	return true
+end
+
+local function queueGiftNotification(player: Player, studsAmount: number?, itemNames: {string}?, senderUserId: number?, senderName: string?)
+	queueProfileNotification(player, {
+		Id = `{GIFT_MESSAGE_TYPE}:{DateTime.now().UnixTimestampMillis}:{math.random(1, 1_000_000)}`,
+		Type = GIFT_MESSAGE_TYPE,
+		StudsAmount = studsAmount,
+		ItemNames = itemNames,
+		SenderUserId = senderUserId,
+		SenderName = senderName or getPlayerNameFromUserId(senderUserId),
+	})
+end
+
+function ShopService:ReconcileItemGrants(player: Player, replica)
+	local grantedSwords = getGrantedSwordSet(player)
+	local ownedGrantedSwords = {}
+	local updatedSwords = {}
+	local didChange = false
+
+	for _, sword in replica.Data.OwnedSwords do
+		local isCurrentGrant = grantedSwords[sword.Name] == true
+
+		if sword.IsItemGrant and not isCurrentGrant then
+			didChange = true
+			if replica.Data.EquippedSword == sword.Name then
+				replica:Set({"EquippedSword"}, nil)
+				player:SetAttribute("EquippedSword", nil)
+			end
+			continue
+		end
+
+		if isCurrentGrant then
+			ownedGrantedSwords[sword.Name] = true
+
+			if not sword.IsItemGrant then
+				local updatedSword = table.clone(sword)
+				updatedSword.IsItemGrant = true
+				table.insert(updatedSwords, updatedSword)
+				didChange = true
+				continue
+			end
+		end
+
+		table.insert(updatedSwords, sword)
+	end
+
+	for swordName in grantedSwords do
+		if not ownedGrantedSwords[swordName] then
+			table.insert(updatedSwords, {
+				Name = swordName,
+				CreatedAt = DateTime.now().UnixTimestamp,
+				IsItemGrant = true,
+			})
+			didChange = true
+		end
+	end
+
+	if didChange then
+		replica:Set({"OwnedSwords"}, updatedSwords)
+	end
+end
+
+function ShopService:CreateSerial(swordName: string)
+	local success, newSerial = pcall(SerialDataStore.UpdateAsync, SerialDataStore, swordName, function(old)
+		if old == nil then
+			old = 0
+		end
+		return old + 1
+	end)
+	return success, newSerial
+end
+
+function ShopService:CreateSerialsForSwords(swordNames: {string}): {[string]: number}
+	local serials = {}
+	for _, swordName in swordNames do
+		if shouldCreateSerialForSword(swordName) then
+			local success, newSerial = ShopService:CreateSerial(swordName)
+			serials[swordName] = if success then newSerial else -1
+		end
+	end
+	return serials
+end
+
+function ShopService:GrantSword(player: Player, swordName: string, serial: number?)
+	local replica = DataService:GetReplica(player, false)
+	if not replica then return end
+
+	local entry = {
+		Name = swordName,
+		CreatedAt = DateTime.now().UnixTimestamp
+	}
+
+	if serial ~= nil then
+		entry.Serial = serial
+	elseif shouldCreateSerialForSword(swordName) then
+		local success, newSerial = ShopService:CreateSerial(swordName)
+		entry.Serial = if success then newSerial else -1
+	end
+
+	if InitialSwordReplicationComplete[player] then
+		ShopService:ReplicateSwordToPlayer(player, swordName)
+	end
+	replica:TableInsert({"OwnedSwords"}, entry)
+
+	return entry
+end
+
+function ShopService:GrantStuds(player: Player, studsAmount: number): boolean
+	local replica = DataService:GetReplica(player, false)
+	if not replica then return false end
+
+	replica:Set({"Studs"}, math.max(0, replica.Data.Studs + studsAmount))
+
+	return true
+end
+
+function ShopService:GrantSwords(player: Player, swordNames: {string}, serials: {[string]: number}?): (boolean, {any})
+	local entries = {}
+	local success = true
+
+	for _, swordName in swordNames do
+		if ShopService:PlayerOwnsSword(player, swordName) then continue end
+		local entry = ShopService:GrantSword(player, swordName, serials and serials[swordName])
+		if entry then
+			table.insert(entries, entry)
+		else
+			success = false
+		end
+	end
+
+	return success, entries
+end
+
+local function profileOwnsAnySword(profile, swordNames: {string}): boolean
+	for _, swordName in swordNames do
+		for _, sword in profile.Data.OwnedSwords do
+			if sword.Name == swordName then
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
+local function profileHasPendingGiftForProduct(profile, productId: number): boolean
+	local hasPendingGift = false
+
+	profile:MessageHandler(function(message)
+		if typeof(message) == "table"
+			and message.Type == GIFT_MESSAGE_TYPE
+			and message.ProductId == productId
+		then
+			hasPendingGift = true
+		end
+	end)
+
+	return hasPendingGift
+end
+
+local function canReceiveOneTimeProduct(userId: number, productId: number): boolean
+	local swordNames = SEASONAL_PRODUCTS[productId]
+	if not swordNames then
+		return true
+	end
+
+	local targetPlayer = Players:GetPlayerByUserId(userId)
+	if targetPlayer then
+		local profile = DataService:GetProfile(targetPlayer, false)
+		return profile ~= nil and not profileOwnsAnySword(profile, swordNames)
+	end
+
+	local profileAlreadyHasProduct = DataService:ReadProfileAsync(userId, function(profile)
+		return profileOwnsAnySword(profile, swordNames)
+			or profileHasPendingGiftForProduct(profile, productId)
+	end)
+	return profileAlreadyHasProduct ~= true
+end
+
+local function getPendingProductPurchase(player: Player, productId: number)
+	local pendingPurchase = PendingProductPurchases[player.UserId]
+	if not pendingPurchase then return nil end
+
+	if pendingPurchase.ProductId ~= productId then
+		return nil
+	end
+
+	if os.clock() - pendingPurchase.CreatedAt > PENDING_PURCHASE_TTL then
+		PendingProductPurchases[player.UserId] = nil
+		return nil
+	end
+
+	return pendingPurchase
+end
+
+local function clearPendingProductPurchase(player: Player, productId: number)
+	local pendingPurchase = PendingProductPurchases[player.UserId]
+	if pendingPurchase and pendingPurchase.ProductId == productId then
+		PendingProductPurchases[player.UserId] = nil
+	end
+end
+
+local function getDailyShopMemoryStoreKey(day: number): string
+	return `Swords:RarityFirst:{day}`
+end
+
+local function getValidDailyShopItems(value, eligibleSwordSet: {[string]: boolean}): {string}?
+	if typeof(value) ~= "table" then
+		return nil
+	end
+
+	local items = {}
+	local seenItems = {}
+	for index = 1, DAILY_SHOP_ITEM_COUNT do
+		local itemName = value[index]
+		if typeof(itemName) ~= "string" or seenItems[itemName] or not eligibleSwordSet[itemName] then
+			return nil
+		end
+
+		seenItems[itemName] = true
+		table.insert(items, itemName)
+	end
+
+	return items
+end
+
+local function getDailyShopRarityBuckets()
+	local rarityBuckets = {}
+	local eligibleSwordSet = {}
+
+	for _, sword in SwordsFolder:GetChildren() do
+		if sword:GetAttribute("InDailyRotation") ~= true then
+			continue
+		end
+
+		local rarityAttribute = sword:GetAttribute("Rarity")
+		if typeof(rarityAttribute) ~= "string" then
+			continue
+		end
+
+		local rarityName = string.upper(rarityAttribute)
+		local weight = DAILY_SHOP_RARITY_WEIGHTS[rarityName]
+		if not weight then
+			continue
+		end
+
+		rarityBuckets[rarityName] = rarityBuckets[rarityName] or {}
+		table.insert(rarityBuckets[rarityName], sword.Name)
+		eligibleSwordSet[sword.Name] = true
+	end
+
+	for _, swords in pairs(rarityBuckets) do
+		table.sort(swords)
+	end
+
+	return rarityBuckets, eligibleSwordSet
+end
+
+local function getDailyShopRarityBucketItemCount(rarityBuckets): number
+	local count = 0
+	for _, swords in pairs(rarityBuckets) do
+		count += #swords
+	end
+
+	return count
+end
+
+local function cloneDailyShopRarityBuckets(rarityBuckets)
+	local clonedBuckets = {}
+	for rarityName, swords in pairs(rarityBuckets) do
+		clonedBuckets[rarityName] = table.clone(swords)
+	end
+
+	return clonedBuckets
+end
+
+local function pickDailyShopRarity(rng: Random, rarityBuckets): string?
+	local totalWeight = 0
+	for _, rarityName in ipairs(DAILY_SHOP_RARITY_ORDER) do
+		local swords = rarityBuckets[rarityName]
+		if swords and #swords > 0 then
+			totalWeight += DAILY_SHOP_RARITY_WEIGHTS[rarityName]
+		end
+	end
+
+	if totalWeight == 0 then
+		return nil
+	end
+
+	local selectedWeight = rng:NextNumber(0, totalWeight)
+	local runningWeight = 0
+	for _, rarityName in ipairs(DAILY_SHOP_RARITY_ORDER) do
+		local swords = rarityBuckets[rarityName]
+		if swords and #swords > 0 then
+			runningWeight += DAILY_SHOP_RARITY_WEIGHTS[rarityName]
+			if selectedWeight <= runningWeight then
+				return rarityName
+			end
+		end
+	end
+
+	return nil
+end
+
+local function generateDailyShopItems(day: number, rarityBuckets): {string}
+	local currentShopItems = {}
+	local rng = Random.new(day)
+
+	local eligibleSwords = cloneDailyShopRarityBuckets(rarityBuckets)
+	for _ = 1, math.min(DAILY_SHOP_ITEM_COUNT, getDailyShopRarityBucketItemCount(eligibleSwords)) do
+		local rarityName = pickDailyShopRarity(rng, eligibleSwords)
+		if not rarityName then
+			break
+		end
+
+		local swords = eligibleSwords[rarityName]
+		local swordIndex = rng:NextInteger(1, #swords)
+		table.insert(currentShopItems, swords[swordIndex])
+		table.remove(swords, swordIndex)
+	end
+
+	return currentShopItems
+end
+
+local function getDailyShopItems(day: number, rarityBuckets, eligibleSwordSet: {[string]: boolean}, timeleft: number): {string}
+	local cacheKey = getDailyShopMemoryStoreKey(day)
+	local cacheExpiration = timeleft + DAILY_SHOP_CACHE_BUFFER
+	local generatedShopItems
+
+	local success, value = pcall(DailyShopMemoryStore.UpdateAsync, DailyShopMemoryStore, cacheKey, function(cachedValue)
+		local cachedShopItems = getValidDailyShopItems(cachedValue, eligibleSwordSet)
+		if cachedShopItems then
+			return cachedShopItems
+		end
+
+		generatedShopItems = generateDailyShopItems(day, rarityBuckets)
+		sendDiscordMessage(SHOP_LOG_CHANNEL_ID, {
+			content = `Daily shop items generated for day {day}: {table.concat(generatedShopItems, ", ")}`,
+		})
+
+		return generatedShopItems
+	end, cacheExpiration)
+
+	if success then
+		local cachedShopItems = getValidDailyShopItems(value, eligibleSwordSet)
+		if cachedShopItems then
+			return cachedShopItems
+		end
+	else
+		warn(`Unable to update daily shop MemoryStore cache: {value}`)
+	end
+
+	return generatedShopItems or generateDailyShopItems(day, rarityBuckets)
+end
+
+function ShopService:DeliverGiftMessage(player: Player, message, processed: () -> ())
+	if message.Type == ADMIN_STUD_GRANT_MESSAGE_TYPE then
+		local studsAmount = message.StudsAmount
+		if typeof(studsAmount) ~= "number" then
+			processed()
+			return
+		end
+
+		if ShopService:GrantStuds(player, studsAmount) then
+			processed()
+			queueStudGrantNotification(player, studsAmount)
+		end
+		return
+	end
+
+	if message.Type ~= GIFT_MESSAGE_TYPE then
+		return
+	end
+
+	local productId = message.ProductId
+	if typeof(productId) ~= "number" then
+		processed()
+		return
+	end
+
+	if STUD_PRODUCTS[productId] then
+		local studsAmount = STUD_PRODUCTS[productId]
+		if ShopService:GrantStuds(player, studsAmount) then
+			processed()
+			queueGiftNotification(player, studsAmount, nil, message.SenderUserId, message.SenderName)
+		end
+		return
+	end
+
+	local swordNames = SEASONAL_PRODUCTS[productId]
+	if swordNames then
+		local success = ShopService:GrantSwords(player, swordNames, message.Serials)
+		if success then
+			processed()
+			queueGiftNotification(player, nil, swordNames, message.SenderUserId, message.SenderName)
+		end
+		return
+	end
+
+	processed()
+end
+
+function ShopService:DeliverProductPurchase(player: Player, productId: number, receiptInfo): boolean
+	local pendingPurchase = getPendingProductPurchase(player, productId)
+	local targetUserId = if pendingPurchase then pendingPurchase.TargetUserId else player.UserId
+	local targetPlayer = Players:GetPlayerByUserId(targetUserId)
+
+	if pendingPurchase and targetUserId ~= player.UserId then
+		local giftSwordNames = SEASONAL_PRODUCTS[productId]
+		local serials = if giftSwordNames then ShopService:CreateSerialsForSwords(giftSwordNames) else nil
+
+		local success = DataService:MessageProfileAsync(targetUserId, {
+			Type = GIFT_MESSAGE_TYPE,
+			ProductId = productId,
+			SenderUserId = player.UserId,
+			SenderName = player.Name,
+			PurchaseId = if receiptInfo then receiptInfo.PurchaseId else nil,
+			CreatedAt = DateTime.now().UnixTimestamp,
+			Serials = serials,
+		})
+
+		if success then
+			local productString = `**unknown product {productId}**`
+			if STUD_PRODUCTS[productId] then
+				productString = `**{STUD_PRODUCTS[productId]} studs**`
+			elseif SEASONAL_PRODUCTS[productId] then
+				local swordStrings = {}
+				for _, swordName in SEASONAL_PRODUCTS[productId] do
+					local serial = serials and serials[swordName]
+					table.insert(swordStrings, `**{swordName}**{if serial then ` (#{serial})` else ""}`)
+				end
+				productString = table.concat(swordStrings, ", ")
+			end
+
+			local targetName = if targetPlayer then targetPlayer.Name else `UserId {targetUserId}`
+			pcall(function()
+				targetName = Players:GetNameFromUserIdAsync(targetUserId)
+			end)
+
+			sendDiscordMessage(PURCHASE_LOG_CHANNEL_ID, {
+				content = `**{player.Name}** ({player.UserId}) gifted {productString} to **{targetName}** ({targetUserId}) for {receiptInfo.CurrencySpent} Robux ({productId})`,
+			})
+			clearPendingProductPurchase(player, productId)
+		end
+
+		return success
+	end
+
+	local success = false
+	if STUD_PRODUCTS[productId] then
+		sendDiscordMessage(PURCHASE_LOG_CHANNEL_ID, {
+			content = `**{player.Name}** ({player.UserId}) purchased **{STUD_PRODUCTS[productId]} studs** for {receiptInfo.CurrencySpent} Robux ({productId})`,
+		})
+		success = ShopService:GrantStuds(targetPlayer or player, STUD_PRODUCTS[productId])
+	elseif SEASONAL_PRODUCTS[productId] then
+		local grantSuccess, entries = ShopService:GrantSwords(targetPlayer or player, SEASONAL_PRODUCTS[productId])
+		success = grantSuccess
+		local productString = ""
+		for _, entry in entries do
+			productString ..= `**{entry.Name}** {if entry.Serial then `(#{entry.Serial})` else ""}, `
+		end
+		productString = productString:sub(1, -2)
+		sendDiscordMessage(PURCHASE_LOG_CHANNEL_ID, {
+			content = `**{player.Name}** ({player.UserId}) purchased {productString} for {receiptInfo.CurrencySpent} Robux ({productId})`,
+		})
+	end
+
+	if success then
+		clearPendingProductPurchase(player, productId)
+	end
+
+	return success
+end
+
+function ShopService.Client:PromptProductPurchase(player: Player, productId: number, targetPlayerOrUserId: Player|number?)
+	if typeof(productId) ~= "number" then return false end
+	if not STUD_PRODUCTS[productId] and not SEASONAL_PRODUCTS[productId] then return false end
+
+	local targetUserId = player.UserId
+	if typeof(targetPlayerOrUserId) == "Instance" and targetPlayerOrUserId:IsA("Player") then
+		targetUserId = targetPlayerOrUserId.UserId
+	elseif typeof(targetPlayerOrUserId) == "number" then
+		targetUserId = targetPlayerOrUserId
+	end
+
+	if not canReceiveOneTimeProduct(targetUserId, productId) then
+		return false
+	end
+
+	PendingProductPurchases[player.UserId] = {
+		ProductId = productId,
+		TargetUserId = targetUserId,
+		CreatedAt = os.clock(),
+	}
+
+	MarketService:PromptProduct(player, productId)
+	return true
+end
+
+function ShopService.Client:PurchaseSword(player: Player, swordName: string)
+	local swordFolder = SwordsFolder:FindFirstChild(swordName)
+	if not swordFolder then return end
+
+	local price = swordFolder:GetAttribute("Price")
+	if typeof(price) ~= "number" then
+		warn("Price not set for sword: " .. swordName)
+		return
+	end
+
+	local replica = DataService:GetReplica(player, false)
+	if not replica then return end
+	
+	if ShopService:PlayerOwnsSword(player, swordName) then return end
+	
+	if replica.Data.Studs < price then return end
+	
+	replica:Set({"Studs"}, replica.Data.Studs - price)
+	local entry = ShopService:GrantSword(player, swordName)
+
+	sendDiscordMessage(STUD_PURCHASE_LOG_CHANNEL_ID, {
+		content = `**{player.Name}** ({player.UserId}) purchased **{swordName}** ({swordFolder:GetAttribute("Rarity") or "?"}{if entry.Serial then `, #{entry.Serial}` else ""}) for {price} Studs`,
+	})
+end
+
+function ShopService.Client:AcknowledgeShopNotification(player: Player, notificationId: string)
+	if typeof(notificationId) ~= "string" then return end
+
+	local replica = DataService:GetReplica(player, false)
+	if not replica then return end
+
+	for index, notification in ipairs(replica.Data.ShopNotifications) do
+		if typeof(notification) == "table" and notification.Id == notificationId then
+			replica:TableRemove({"ShopNotifications"}, index)
+			return
+		end
+	end
+end
+
+function ShopService.Client:AcknowledgeReplicatedSword(player: Player, swordName: string)
+	if typeof(swordName) ~= "string" then return end
+
+	local playerGui = player:FindFirstChild("PlayerGui")
+	if not playerGui then return end
+
+	for _, child in ipairs(playerGui:GetChildren()) do
+		if child.Name == swordName and CollectionService:HasTag(child, REPLICATE_SWORD_TAG) then
+			child:Destroy()
+		end
+	end
+end
+
+function ShopService.Client:EquipSword(player: Player, swordName: string?)
+	local replica = DataService:GetReplica(player, false)
+	if not replica then return end
+
+	if swordName == nil then
+		replica:Set({"EquippedSword"}, nil)
+		player:SetAttribute("EquippedSword", nil)
+		return
+	end
+	
+	if not ShopService:PlayerOwnsSword(player, swordName) then return end
+	
+	replica:Set({"EquippedSword"}, swordName)
+	player:SetAttribute("EquippedSword", swordName)
+end
+
+function ShopService.Client:RequestSwordReplication(player: Player)
+	SwordReplicationReadyPlayers[player] = true
+
+	if not SwordDataLoadedPlayers[player] then
+		return false
+	end
+
+	local replica = DataService:GetReplica(player, false)
+	if not replica then
+		return false
+	end
+
+	return ShopService:ReplicateInitialOwnedSwords(player, replica.Data.OwnedSwords)
+end
+
+function ShopService:KnitStart()
+	-- Register product purchases
+	for productId in STUD_PRODUCTS do
+		MarketService:ListenForProductPurchase(productId, function(player: Player, receiptInfo)
+			return ShopService:DeliverProductPurchase(player, productId, receiptInfo)
+		end)
+	end
+
+	for productId in SEASONAL_PRODUCTS do
+		MarketService:ListenForProductPurchase(productId, function(player: Player, receiptInfo)
+			return ShopService:DeliverProductPurchase(player, productId, receiptInfo)
+		end)
+	end
+	
+	-- Handle player data load
+	DataService.PlayerDataLoaded:Connect(function(player, record)
+		local replica = record.Replica
+
+		ShopService:ReconcileItemGrants(player, replica)
+		SwordDataLoadedPlayers[player] = true
+		ShopService:ReplicateInitialOwnedSwords(player, replica.Data.OwnedSwords)
+
+		if replica.Data.EquippedSword then
+			player:SetAttribute("EquippedSword", replica.Data.EquippedSword)
+		end
+
+		local profile = DataService:GetProfile(player)
+		if profile then
+			profile:MessageHandler(function(message, processed)
+				ShopService:DeliverGiftMessage(player, message, processed)
+			end)
+		end
+	end)
+
+	Players.PlayerRemoving:Connect(function(player)
+		PendingProductPurchases[player.UserId] = nil
+		SwordReplicationReadyPlayers[player] = nil
+		SwordDataLoadedPlayers[player] = nil
+		InitialSwordReplicationComplete[player] = nil
+	end)
+	
+	-- Update shop loop
+	ClientSwordsFolder:ClearAllChildren()
+
+	for _,swords in SEASONAL_PRODUCTS do
+		for _,swordName in swords do
+			if not ClientSwordsFolder:FindFirstChild(swordName) then
+				local sword = SwordsFolder:FindFirstChild(swordName)
+				if sword then
+					sword:Clone().Parent = ClientSwordsFolder
+				end
+			end
+		end
+	end
+
+	task.spawn(function()
+		while true do
+			local t = DateTime.now().UnixTimestamp
+			local day = math.floor(t / (60 * 60 * 24)) 
+			local timeleft = 86400 - (t % 86400)
+			timeLeftValue.Value = timeleft
+
+			if day ~= currentDayValue.Value then
+				currentDayValue.Value = day
+
+				currentRotation:ClearAllChildren()
+
+				local rarityBuckets, eligibleSwordSet = getDailyShopRarityBuckets()
+				local currentShopItems = getDailyShopItems(day, rarityBuckets, eligibleSwordSet, timeleft)
+				
+				for _, itemName in ipairs(currentShopItems) do
+					local v = Instance.new("StringValue")
+					v.Name = itemName
+					v.Value = itemName
+					v.Parent = currentRotation
+
+					if not ClientSwordsFolder:FindFirstChild(itemName) then
+						local sword = SwordsFolder:FindFirstChild(itemName)
+						if sword then
+							sword:Clone().Parent = ClientSwordsFolder
+						end
+					end
+				end
+				print("Updated shop items.")
+			end
+			task.wait(1)
+		end
+	end)
+end
+
+function ShopService:KnitInit()
+	DataService = Knit.GetService("DataService")
+	MarketService = Knit.GetService("MarketService")
+end
+
+return ShopService
