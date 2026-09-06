@@ -1,0 +1,311 @@
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local ReplicatedStorage = game:GetService('ReplicatedStorage')
+local IntegratedHostingUIs = ReplicatedStorage.IntegratedHostingUIs
+local CustomColorUIs = IntegratedHostingUIs.CustomColorUIs
+local RequestColorEvent = CustomColorUIs.RequestColorEvent
+local UpdateColorEvent = CustomColorUIs.UpdateColorEvent
+local NametagUIs = IntegratedHostingUIs.NametagUIs
+local SizeChecker = NametagUIs.SizeChecker
+local SizeCheckerFrame = SizeChecker.SizeCheckerFrame
+local NewNametagEvent = NametagUIs.NewNametagEvent
+
+local GROUP_ID = 32867557
+
+--[[local function RainbowText(n)
+	return math.acos(math.cos(n * math.pi)) / math.pi
+end]]
+
+local Icons = {
+	[1963791252] = "rbxassetid://18616899428",-- Riley
+	[211061988] = "rbxassetid://126105086617914",-- Krystal
+	[2231857705] = "rbxassetid://18759456185",-- Jaclyn
+	[1025027246] = "rbxassetid://126105086617914",-- Krystal
+	[1274716565] = "rbxassetid://107729131019962",-- Alexis
+	[388543058] = "rbxassetid://87094269124167",-- Thomas
+	[201361914] = "rbxassetid://131251464630612",-- Jay
+	[834136941] = "rbxassetid://131251464630612",-- Aiden
+	[998293501] = "rbxassetid://131251464630612",-- Rubn
+	[513512958] = "rbxassetid://131702785706558",-- Savanna
+	[101275100] = "rbxassetid://91092678677130", -- Chocolate
+	[3851455120] = "rbxassetid://105325127515997",-- Muhammad
+	[1686587705] = "rbxassetid://87047031024639",-- Comp
+	[2406196868] = "rbxassetid://91092678677130",-- Najim
+	[4126044667] = "rbxassetid://110430865036126",-- Liam
+	[176195088] = "rbxassetid://131721509578835", -- Beatsz
+	[148593304] = "rbxassetid://128221764069199", -- xevm
+	[358801808] = "rbxassetid://107465442402357", -- kuhleaf
+	[1650828957] = "rbxassetid://107832528283363",-- Flavian
+}
+
+local Perks = {
+	41476120, -- Assigns perk
+	2806431827, -- Nukyri perk
+	1498367436, -- Raya perk
+	3643089842, -- Risa perk
+	101275100, -- Chocolate perk
+	1115582155, -- Joshies perk
+	10263831, -- Ioz Perk
+	148593304, -- Xevm perk
+	171320356, -- rune perk
+}
+
+local LeaderboardFrames = {}
+local RankFrames = {}
+
+function UpdateColors(Frames, Colors)
+	if Frames:FindFirstChild("UIGradient") then
+		Frames.UIGradient.Color = ColorSequence.new(Colors["BackgroundColorTop"], Colors["BackgroundColorBottom"])
+	end
+	if Frames:FindFirstChild('UIStroke') then
+		if Frames.UIStroke:FindFirstChild('UIGradient') then
+			Frames.UIStroke.UIGradient.Color = ColorSequence.new(Colors["BackgroundColorTop"], Colors["BackgroundColorBottom"])
+		end
+	end
+end
+
+function SetupCharacter(Player, Character)
+	local Humanoid = Character:WaitForChild("Humanoid", 60)
+	local Head = Character:WaitForChild("Head", 60)
+
+	Humanoid.NameDisplayDistance = 0
+	Humanoid.HealthDisplayDistance = 0
+	
+	local Display = script.Nametag:Clone()
+	
+	local NameFrame = Display.NameFrame
+	
+	local CustomIcon = NameFrame.CustomIcon
+	
+	local TagsFrame = Display.TagsFrame
+	local LeaderboardHolder = TagsFrame.ALeaderboardHolder
+	local LeaderboardText = LeaderboardHolder.LeaderboardText
+	local TeamHolder = TagsFrame.BTeamHolder
+	local TeamText = TeamHolder.TeamText
+	local RankHolder = TagsFrame.CRankHolder
+	local RankText = RankHolder.RankText
+	local PlayerValue = Display.Player
+	local IconsFrame = Display.IconsFrame
+	local HealthDisplay = Display.Health
+
+	PlayerValue.Value = Player
+	
+	local Success, Rank = pcall(function()
+		return Player:GetRankInGroup(GROUP_ID)
+	end)
+	local Success, Role = pcall(function()
+		return Player:GetRoleInGroup(GROUP_ID)
+	end)
+	RankText.Text = Role
+	
+	if Player:FindFirstChild('leaderstats') and Player.leaderstats:FindFirstChild('Rank') and Player.leaderstats.Rank.Value ~= Role then
+		LeaderboardText.Text = Player.leaderstats.Rank.Value
+		LeaderboardHolder.Parent = TagsFrame
+	else
+		LeaderboardHolder.Parent = TagsFrame.UIListLayout
+	end
+
+	local function UpdateHealth()
+		if Humanoid.MaxHealth <= 0 then return end
+		
+		local Health = Humanoid.Health
+		local MaxHealth = Humanoid.MaxHealth
+
+		HealthDisplay.Visible = Health < MaxHealth or MaxHealth > 1000
+		
+		HealthDisplay.Frame.Size = UDim2.fromScale(
+			math.clamp(Health / MaxHealth, 0, 1),
+			1
+		)
+		
+		if MaxHealth > 1000 then
+			HealthDisplay.Frame.BackgroundColor3 =  Color3.fromRGB(140,140,225)
+			HealthDisplay.Frame.Size = UDim2.fromScale(1,1)
+		elseif Health/MaxHealth > 0.5 then
+			HealthDisplay.Frame.BackgroundColor3 = Color3.fromRGB(225,225,140):Lerp(Color3.fromRGB (140,225,140), (((Health/MaxHealth)-0.5)/0.5))
+		else
+			HealthDisplay.Frame.BackgroundColor3 = Color3.fromRGB(225, 140, 140):Lerp(Color3.fromRGB (225,225,140), (((Health/MaxHealth))/0.5))
+		end
+	end
+
+	Humanoid:GetPropertyChangedSignal("Health"):Connect(UpdateHealth)
+	Humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(UpdateHealth)
+	UpdateHealth()
+
+	local function addIcon(Name, Image, Size)
+		local icon = script.IconTemplate:Clone()
+		local SizeDif = .91-(Size*.91)
+		icon.Name = Name
+		icon.TopLabel.Image = Image
+		icon.TopLabel.Size = UDim2.fromScale(Size * .91, Size * .91)
+		icon.TopLabel.Position = UDim2.fromScale(0.5, SizeDif/2)
+		icon.UnderLabel.Image = Image
+		icon.UnderLabel.Size = UDim2.fromScale(Size * .91, Size * .91)
+		icon.UnderLabel.Position = UDim2.fromScale(0.5, 1 - SizeDif/2)
+		icon.Parent = IconsFrame
+	end
+
+	if Icons[Player.UserId] then
+		CustomIcon.Image = Icons[Player.UserId]
+	else
+		CustomIcon:Destroy()
+	end
+
+	pcall(function()
+		if MarketplaceService:PlayerOwnsAssetAsync(Player, 14491484252) then
+			addIcon("VIP_Icon", "http://www.roblox.com/asset/?id=121106070017957", 1)
+		end
+	end)
+
+	pcall(function()
+		if MarketplaceService:PlayerOwnsAssetAsync(Player, 104178949439032) then
+			addIcon("Premium_Icon", "http://www.roblox.com/asset/?id=11322089611", 1)
+			Player:SetAttribute("OwnsPremium", true)
+		end
+	end)
+
+	if Rank == 246 then
+		addIcon("Developer_Icon", "http://www.roblox.com/asset/?id=10885640682", .85)
+	end
+	
+	if table.find(Perks, Player.UserId) then
+		addIcon("Robux_Icon", "http://www.roblox.com/asset/?id=11560341132", .875)
+	end
+
+	if Rank >= 248 then
+		--[[task.spawn(function()
+			local t = 0
+			while character.Parent and RankLabel.Parent do
+				RankLabel.TextColor3 = Color3.fromHSV(RainbowText(t), 1, 1)
+				t += 0.003
+				task.wait(0.03)
+			end
+		end)]]
+		
+		addIcon("Admin_Icon", "http://www.roblox.com/asset/?id=9768843948", .925)
+	end
+	
+	local function UpdateTagSizes()
+		local TagsClone = Display.TagsFrame:Clone()
+		TagsClone.Parent = SizeCheckerFrame
+		
+		TagsClone.CRankHolder.Size = UDim2.new(999,0,1,0)
+		RankHolder.Size = UDim2.new((TagsClone.CRankHolder.RankText.TextBounds.X)/750+.05,0,1,0)
+		TagsClone.CRankHolder.Size = UDim2.new((1*math.max(TagsClone.CRankHolder.RankText.TextBounds.X, TagsClone.CRankHolder.RankText.TextBounds.Y))/750,0,1,0)
+		RankHolder.ColorFrame.Size = UDim2.new(1,0,.8,0)
+		
+		if TagsClone:FindFirstChild('BTeamHolder') then
+			TagsClone.BTeamHolder.Size = UDim2.new(999,0,1,0)
+			TeamHolder.Size = UDim2.new((TagsClone.BTeamHolder.TeamText.TextBounds.X)/750+.05,0,1,0)
+			TagsClone.BTeamHolder.Size = UDim2.new((1*math.max(TagsClone.BTeamHolder.TeamText.TextBounds.X, TagsClone.BTeamHolder.TeamText.TextBounds.Y))/750,0,1,0)
+			TeamHolder.ColorFrame.Size = UDim2.new(1,0,.8,0)
+		end
+		
+		if TagsClone:FindFirstChild('ALeaderboardHolder') then
+			TagsClone.ALeaderboardHolder.Size = UDim2.new(999,0,1,0)
+			LeaderboardHolder.Size = UDim2.new((TagsClone.ALeaderboardHolder.LeaderboardText.TextBounds.X)/750+.05,0,1,0)
+			TagsClone.ALeaderboardHolder.Size = UDim2.new((1*math.max(TagsClone.ALeaderboardHolder.LeaderboardText.TextBounds.X, TagsClone.ALeaderboardHolder.LeaderboardText.TextBounds.Y))/750,0,1,0)
+			LeaderboardHolder.ColorFrame.Size = UDim2.new(1,0,.8,0)
+		end
+		
+		TagsClone:Destroy()
+	end
+	
+	if Player.Team then
+		TeamText.Text = Player.Team.Name
+		TeamHolder.Parent = TagsFrame
+		TeamHolder.ColorFrame.BackgroundColor = Player.TeamColor
+		TeamHolder.ColorFrame.UIStroke.Color = Player.TeamColor.Color
+	else
+		TeamHolder.Parent = TagsFrame.UIListLayout
+	end
+	
+	Player:GetPropertyChangedSignal("Team"):Connect(function()
+		if Player.Team then
+			TeamText.Text = Player.Team.Name
+			TeamHolder.ColorFrame.BackgroundColor = Player.TeamColor
+			TeamHolder.ColorFrame.UIStroke.Color = Player.TeamColor.Color
+			TeamHolder.Parent = TagsFrame
+		else
+			TeamHolder.Parent = TagsFrame.UIListLayout
+		end
+		UpdateTagSizes()
+	end)
+	
+	task.spawn(function()
+		local leaderstats = Player:WaitForChild('leaderstats', 20)
+		if leaderstats then
+			local Rank = leaderstats:WaitForChild("Rank", 20)
+			if Rank then
+				Rank:GetPropertyChangedSignal("Value"):Connect(function()
+					if Player:FindFirstChild('leaderstats') and Player.leaderstats:FindFirstChild('Rank') and Player.leaderstats.Rank.Value ~= Role and Player.leaderstats.Rank.Value ~= "" and Player.leaderstats.Rank.Value ~= " " and Player.leaderstats.Rank.Value ~= "-" and Player.leaderstats.Rank.Value ~= "N/A" then
+						LeaderboardText.Text = Player.leaderstats.Rank.Value
+						LeaderboardHolder.Parent = TagsFrame
+					else
+						LeaderboardHolder.Parent = TagsFrame.UIListLayout
+					end
+					UpdateTagSizes()
+				end)
+			end
+		end
+	end)
+	UpdateTagSizes()
+	
+	task.spawn(function()
+			local Success, Colors = pcall(function()
+			return RequestColorEvent:InvokeClient(Player, {"BackgroundColorTop", "BackgroundColorBottom"})
+		end)
+		
+		if Success then
+			UpdateColors(LeaderboardHolder.ColorFrame, Colors)
+			UpdateColors(RankHolder.ColorFrame, Colors)
+		end
+	end)
+	
+	LeaderboardFrames[Player] = LeaderboardHolder.ColorFrame
+	RankFrames[Player] = RankHolder.ColorFrame
+	
+	task.delay(.5, function()
+		Display.Adornee = Head
+		Display.Parent = Character
+		NewNametagEvent:FireAllClients(Display)
+		
+		task.spawn(function()
+			while Display.Parent and Display.Parent.Parent do
+				UpdateTagSizes()
+				wait(5)
+			end
+		end)
+	end)
+end
+
+UpdateColorEvent.OnServerEvent:Connect(function(Player)
+	local Success, Colors = pcall(function()
+		return RequestColorEvent:InvokeClient(Player, {"BackgroundColorTop", "BackgroundColorBottom"})
+	end)
+
+	if Success and Colors then
+		if LeaderboardFrames[Player] then
+			UpdateColors(LeaderboardFrames[Player], Colors)
+		end
+		if RankFrames[Player] then
+			UpdateColors(RankFrames[Player], Colors)
+		end
+	end
+end)
+
+local function PlayerAdded(Player)
+	Player.CharacterAdded:Connect(function(Character)
+		SetupCharacter(Player, Character)
+	end)
+
+	if Player.Character then
+		SetupCharacter(Player, Player.Character)
+	end
+end
+
+Players.PlayerAdded:Connect(PlayerAdded)
+
+for _, Player in ipairs(Players:GetPlayers()) do
+	PlayerAdded(Player)
+end
